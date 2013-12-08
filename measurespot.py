@@ -176,7 +176,7 @@ class MeasurementSpots(cpm.CPModule):
         workspace.display_data.counts = display_stats
         cpmi.add_object_count_measurements(meas,
                                            input_spot_name, mean)
-        meas.add_measurement(input_spot_name, "Spot_counts", count_cells)
+        workspace.add_measurement(input_spot_name, "Spot_counts", count_cells)
         self.save(workspace)
 
     def is_interactive(self):

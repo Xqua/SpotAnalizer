@@ -367,6 +367,7 @@ class SpotAnalyzer(cpm.CPModule):
 
     def filter_on_gaussian(self, IMG, spots):
         "Filter the spots based on gaussian correlation."
+        return spots
 
     def filter_on_size(self, labeled_image, object_count):
         """ Filter the labeled image based on the size range
