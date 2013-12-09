@@ -134,6 +134,7 @@ class MeasurementSpots(cpm.CPModule):
         input_mask_name = self.input_object_mask.value
         input_spot_name = self.input_object_spots.value
 
+        print input_mask_name, input_spot_name
         #
         # Get the measurements object - we put the measurements we
         # make in here
@@ -176,7 +177,8 @@ class MeasurementSpots(cpm.CPModule):
         workspace.display_data.counts = display_stats
         cpmi.add_object_count_measurements(meas,
                                            input_spot_name, mean)
-        workspace.add_measurement(input_spot_name, "Spot_counts", count_cells)
+        for i in count_cells:
+            workspace.add_measurement(input_spot_name, "Spots_CellCounts", [i])
         self.save(workspace)
 
     def is_interactive(self):

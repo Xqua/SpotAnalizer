@@ -174,7 +174,7 @@ class SpotAnalyzer(cpm.CPModule):
             <li>%(PP_GAUS)%: Each Object is fitted with a gaussian.</li>
             </ul>""" % globals())
 
-        self.gaussian_threshold = cps.float(
+        self.gaussian_threshold = cps.Float(
             'Correlation Threshold',
             0.8,
             minval=0,
