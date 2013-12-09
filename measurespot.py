@@ -154,7 +154,7 @@ class MeasurementSpots(cpm.CPModule):
 
         for i in unique_cells[1:]:
             mask = (input_mask == i).astype(np.int)
-            masked_spot = input_spot * mask
+            masked_spot = (input_spot * mask).astype(np.int16)
             lab, counts = ndimage.label(masked_spot)
             count_cells.append(counts)
             display_stats.append([i, counts])
