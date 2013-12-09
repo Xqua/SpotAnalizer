@@ -17,7 +17,7 @@ to get it to display correctly.
 
 import numpy as np
 import scipy.ndimage as ndimage
-
+import os
 #
 #
 # Imports from CellProfiler
@@ -29,11 +29,14 @@ import scipy.ndimage as ndimage
 
 import identify as cpmi
 import cellprofiler.cpmodule as cpm
+import cellprofiler.measurements as cpmeas
 import cellprofiler.settings as cps
+# from cellprofiler.preferences import get_absolute_path, get_output_file_name
 from cellprofiler.preferences import \
     DEFAULT_INPUT_FOLDER_NAME, \
     DEFAULT_OUTPUT_FOLDER_NAME, ABSOLUTE_FOLDER_NAME, \
     DEFAULT_INPUT_SUBFOLDER_NAME, DEFAULT_OUTPUT_SUBFOLDER_NAME
+from cellprofiler.modules.loadimages import C_FILE_NAME, C_PATH_NAME
 
 #
 #
@@ -90,6 +93,14 @@ class MeasurementSpots(cpm.CPModule):
         # which can then be used as inputs in your module.
         #
 
+        self.input_image_name = cps.ImageNameSubscriber(
+            # The text to the left of the edit box
+            "Channel analized:",
+            # HTML help that gets displayed when the user presses the
+            # help button to the right of the edit box
+            doc="""This needs to be the spot channel.
+            """)
+
         self.input_object_mask = cps.ObjectNameSubscriber(
             "Cells:",
             doc="""Cell mask to get cell statistics.""")
@@ -120,9 +131,9 @@ class MeasurementSpots(cpm.CPModule):
     # a template for visible_settings that you can cut and paste here.
     #
     def settings(self):
-        return [self.input_object_mask,
-                self.input_object_spots,
-                self.directory]
+        return [self.input_image_name,
+                self.input_object_mask,
+                self.input_object_spots]
 
     #
     # CellProfiler calls "run" on each image set in your pipeline.
@@ -193,10 +204,19 @@ class MeasurementSpots(cpm.CPModule):
         figure.subplot_table(1, 0, counts, ratio=(.25, .25, .25, .25))
 
     def save(self, workspace):
-        path = self.directory.value.replace(
-            "Default Input Folder sub-folder|", DEFAULT_INPUT_SUBFOLDER_NAME)
-        f = open(path + '/cell_count.tsv', 'a')
-        # f.write(">cell\tcount\n")
+        # path = self.directory.value.replace(
+            # "Default Input Folder sub-folder|", DEFAULT_INPUT_SUBFOLDER_NAME)
+        measurements = workspace.measurements
+        filename_feature = C_FILE_NAME + "_" + self.input_image_name.value
+        pathname_feature = C_PATH_NAME + "_" + self.input_image_name.value
+        pathname = measurements.get_measurement(
+            cpmeas.IMAGE, pathname_feature)
+        filename = measurements.get_measurement(
+            cpmeas.IMAGE, filename_feature)
+        filename += '.spotdata'
+        path = os.path.join(pathname, filename)
+
+        f = open(path, 'w')
         for i in workspace.display_data.counts:
             f.write("%s\t%s\n" % (i[0], i[1]))
         f.close()
