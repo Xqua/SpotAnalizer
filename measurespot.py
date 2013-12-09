@@ -154,7 +154,8 @@ class MeasurementSpots(cpm.CPModule):
 
         for i in unique_cells[1:]:
             mask = (input_mask == i).astype(np.int)
-            masked_spot = (input_spot * mask).astype(np.int16)
+            print (input_spot * mask).dtype
+            masked_spot = (input_spot * mask).astype(np.int)
             lab, counts = ndimage.label(masked_spot)
             count_cells.append(counts)
             display_stats.append([i, counts])
@@ -193,7 +194,7 @@ class MeasurementSpots(cpm.CPModule):
 
     def save(self, workspace):
         path = self.directory.value.replace(
-            "Default Input Folder sub-folder|", "/home/xqua/")
+            "Default Input Folder sub-folder|", DEFAULT_INPUT_SUBFOLDER_NAME)
         f = open(path + '/cell_count.tsv', 'a')
         # f.write(">cell\tcount\n")
         for i in workspace.display_data.counts:
