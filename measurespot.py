@@ -101,6 +101,14 @@ class MeasurementSpots(cpm.CPModule):
             doc="""This needs to be the spot channel.
             """)
 
+        self.input_image_coloc_name = cps.ImageNameSubscriber(
+            # The text to the left of the edit box
+            "Channel intensity:",
+            # HTML help that gets displayed when the user presses the
+            # help button to the right of the edit box
+            doc="""This needs to be the intensity measured channel.
+            """)
+
         self.input_object_mask = cps.ObjectNameSubscriber(
             "Cells:",
             doc="""Cell mask to get cell statistics.""")
@@ -132,6 +140,7 @@ class MeasurementSpots(cpm.CPModule):
     #
     def settings(self):
         return [self.input_image_name,
+                self.input_image_coloc_name,
                 self.input_object_mask,
                 self.input_object_spots]
 
@@ -144,12 +153,18 @@ class MeasurementSpots(cpm.CPModule):
         #
         input_mask_name = self.input_object_mask.value
         input_spot_name = self.input_object_spots.value
+        input_intensity_name = self.input_image_coloc_name.value
 
-        print input_mask_name, input_spot_name
         #
         # Get the measurements object - we put the measurements we
         # make in here
         #
+
+        image_set = workspace.image_set
+        input_image = image_set.get_image(input_intensity_name,
+                                          must_be_grayscale=True)
+        pixels = input_image.pixel_data
+
         meas = workspace.measurements
         object_set = workspace.object_set
 
@@ -161,15 +176,28 @@ class MeasurementSpots(cpm.CPModule):
         display_stats = [["cell", "number of spot"]]
         statistics = [["Mean", "Median", "SD"]]
         count_cells = []
+        intensity_spots = []
+        area_spots = []
         unique_cells = np.unique(input_mask)
 
         for i in unique_cells[1:]:
             mask = (input_mask == i).astype(np.int)
-            print (input_spot * mask).dtype
             masked_spot = (input_spot * mask).astype(np.int16)
             lab, counts = ndimage.label(masked_spot)
             count_cells.append(counts)
             display_stats.append([i, counts])
+            unique_spots = np.unique(lab)
+            spot_intensity = []
+            spot_area = []
+            for i in unique_spots[1:]:
+                spot_mask = (lab == i).astype(np.int16)
+                intensity_masked = ((pixels * 65536).astype(np.int32) * spot_mask)
+                tot_pixel = spot_mask.sum()
+                tot_intensity = intensity_masked.sum()
+                spot_intensity.append(tot_intensity)
+                spot_area.append(tot_pixel)
+            intensity_spots.append(spot_intensity)
+            area_spots.append(spot_area)
 
         mean = np.mean(count_cells)
         median = np.median(count_cells)
@@ -187,6 +215,8 @@ class MeasurementSpots(cpm.CPModule):
         #
         workspace.display_data.statistics = statistics
         workspace.display_data.counts = display_stats
+        workspace.display_data.intensity_spots = intensity_spots
+        workspace.display_data.area_spots = area_spots
         cpmi.add_object_count_measurements(meas,
                                            input_spot_name, mean)
         for i in count_cells:
@@ -217,6 +247,15 @@ class MeasurementSpots(cpm.CPModule):
         path = os.path.join(pathname, filename)
 
         f = open(path, 'w')
-        for i in workspace.display_data.counts:
-            f.write("%s\t%s\n" % (i[0], i[1]))
+        for i in workspace.display_data.counts[1:]:
+            f.write("Counts_%s\t%s\n" % (i[0], i[1]))
+            tmp = "Intensity_%s" % i[0]
+            for j in workspace.display_data.intensity_spots[i[0] - 1]:
+                tmp += '\t%s' % j
+            f.write(tmp + '\n')
+            tmp = "Area_%s" % i[0]
+            for j in workspace.display_data.area_spots[i[0] - 1]:
+                tmp += '\t%s' % j
+            f.write(tmp + '\n')
+
         f.close()
