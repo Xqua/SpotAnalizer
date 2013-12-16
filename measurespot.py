@@ -113,6 +113,10 @@ class MeasurementSpots(cpm.CPModule):
             "Cells:",
             doc="""Cell mask to get cell statistics.""")
 
+        self.input_nuclei_mask = cps.ObjectNameSubscriber(
+            "Nuclei:",
+            doc="""Nuclei mask to get Nuclear to Cytoplasm ratio statistics.""")
+
         self.input_object_spots = cps.ObjectNameSubscriber(
             "Spots:",
             doc="""Spots binary mask extracted with SpotAnalizer""")
@@ -154,7 +158,7 @@ class MeasurementSpots(cpm.CPModule):
         input_mask_name = self.input_object_mask.value
         input_spot_name = self.input_object_spots.value
         input_intensity_name = self.input_image_coloc_name.value
-
+        input_nuclei_name = self.input_nuclei_mask.value
         #
         # Get the measurements object - we put the measurements we
         # make in here
@@ -172,16 +176,47 @@ class MeasurementSpots(cpm.CPModule):
         input_mask = objects_input_mask.segmented
         objects_input_spot = object_set.get_objects(input_spot_name)
         input_spot = objects_input_spot.segmented
+        objects_input_nuclei = object_set.get_objects(input_nuclei_name)
+        input_nuclei = objects_input_nuclei.segmented
 
         display_stats = [["cell", "number of spot"]]
         statistics = [["Mean", "Median", "SD"]]
         count_cells = []
         intensity_spots = []
         area_spots = []
+        cytoplasm_intensity_mean = []
+        cytoplasm_intensity_std = []
+        nuclear_intensity_mean = []
+        nuclear_intensity_std = []
+        N2C = []
         unique_cells = np.unique(input_mask)
 
+        #
+        # Calculating Spots Statistics
+        #
+        IMG = (pixels * 65536).astype(np.int16)
+
         for i in unique_cells[1:]:
+            # Getting the masks
             mask = (input_mask == i).astype(np.int)
+            nuclei = (input_nuclei == i).astype(np.int)
+            # Filtering IMG channel with Nuclei Mask and replacing 0 with nan
+            nuclei_IMG = (IMG * nuclei).astype(np.float)
+            cytoplasm_IMG = (IMG * mask).astype(np.float)
+            for i in range(len(nuclei_IMG)):
+                for j in range(len(nuclei_IMG[i])):
+                    if nuclei_IMG[i][j] == 0:
+                        nuclei_IMG[i][j] = np.nan
+                    if cytoplasm_IMG[i][j] == 0:
+                        cytoplasm_IMG[i][j] = np.nan
+            # Calculating intensity
+            nuclear_intensity_mean.append(np.nanmean(nuclei_IMG))
+            nuclear_intensity_std.append(np.nanstd(nuclei_IMG))
+            cytoplasm_intensity_mean.append(np.nanmean(cytoplasm_IMG))
+            cytoplasm_intensity_std.append(np.nanstd(cytoplasm_IMG))
+            # Nuclear to cytoplasm ratio
+            N2C.append(nuclear_intensity_mean[
+                       -1] / cytoplasm_intensity_mean[-1])
             masked_spot = (input_spot * mask).astype(np.int16)
             lab, counts = ndimage.label(masked_spot)
             count_cells.append(counts)
@@ -191,7 +226,7 @@ class MeasurementSpots(cpm.CPModule):
             spot_area = []
             for i in unique_spots[1:]:
                 spot_mask = (lab == i).astype(np.int16)
-                intensity_masked = ((pixels * 65536).astype(np.int32) * spot_mask)
+                intensity_masked = (IMG * spot_mask)
                 tot_pixel = spot_mask.sum()
                 tot_intensity = intensity_masked.sum()
                 spot_intensity.append(tot_intensity)
@@ -204,6 +239,11 @@ class MeasurementSpots(cpm.CPModule):
         sd = np.std(count_cells)
 
         statistics.append([mean, median, sd])
+
+        #
+        # Calculating Cytoplasm and Nuclear FUS intensity
+        #
+
         #
         # We record some statistics which we will display later.
         # We format them so that Matplotlib can display them in a table.
@@ -217,6 +257,11 @@ class MeasurementSpots(cpm.CPModule):
         workspace.display_data.counts = display_stats
         workspace.display_data.intensity_spots = intensity_spots
         workspace.display_data.area_spots = area_spots
+        workspace.display_data.cytoplasm_intensity_mean = cytoplasm_intensity_mean
+        workspace.display_data.cytoplasm_intensity_std = cytoplasm_intensity_std
+        workspace.display_data.nuclear_intensity_mean = nuclear_intensity_mean
+        workspace.display_data.nuclear_intensity_std = nuclear_intensity_std
+        workspace.display_data.N2C = N2C
         cpmi.add_object_count_measurements(meas,
                                            input_spot_name, mean)
         for i in count_cells:
@@ -239,6 +284,7 @@ class MeasurementSpots(cpm.CPModule):
         measurements = workspace.measurements
         filename_feature = C_FILE_NAME + "_" + self.input_image_name.value
         pathname_feature = C_PATH_NAME + "_" + self.input_image_name.value
+        # img_nb = measurements.image_number
         pathname = measurements.get_measurement(
             cpmeas.IMAGE, pathname_feature)
         filename = measurements.get_measurement(
@@ -249,6 +295,11 @@ class MeasurementSpots(cpm.CPModule):
         f = open(path, 'w')
         for i in workspace.display_data.counts[1:]:
             f.write("Counts_%s\t%s\n" % (i[0], i[1]))
+            f.write("Nuclear_Mean_Int_%s\t%s\n" % (i[0], workspace.display_data.nuclear_intensity_mean[i[0] - 1]))
+            f.write("Nuclear_Mean_Std_%s\t%s\n" % (i[0], workspace.display_data.nuclear_intensity_std[i[0] - 1]))
+            f.write("Cytoplasm_Mean_Int_%s\t%s\n" % (i[0], workspace.display_data.cytoplasm_intensity_mean[i[0] - 1]))
+            f.write("Cytoplasm_Mean_Std_%s\t%s\n" % (i[0], workspace.display_data.cytoplasm_intensity_std[i[0] - 1]))
+            f.write("N2C_%s\t%s\n" % (i[0], workspace.display_data.N2C[i[0] - 1]))
             tmp = "Intensity_%s" % i[0]
             for j in workspace.display_data.intensity_spots[i[0] - 1]:
                 tmp += '\t%s' % j
