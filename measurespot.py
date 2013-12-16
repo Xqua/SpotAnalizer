@@ -204,20 +204,19 @@ class MeasurementSpots(cpm.CPModule):
             # Filtering IMG channel with Nuclei Mask and replacing 0 with nan
             nuclei_IMG = (IMG * nuclei).astype(np.float)
             cytoplasm_IMG = (IMG * mask).astype(np.float)
-            for i in range(len(nuclei_IMG)):
+            for k in range(len(nuclei_IMG)):
                 for j in range(len(nuclei_IMG[i])):
-                    if nuclei_IMG[i][j] == 0:
-                        nuclei_IMG[i][j] = np.nan
-                    if cytoplasm_IMG[i][j] == 0:
-                        cytoplasm_IMG[i][j] = np.nan
+                    if nuclei_IMG[k][j] == 0:
+                        nuclei_IMG[k][j] = np.nan
+                    if cytoplasm_IMG[k][j] == 0:
+                        cytoplasm_IMG[k][j] = np.nan
             # Calculating intensity
             nuclear_intensity_mean.append(np.nanmean(nuclei_IMG))
             nuclear_intensity_std.append(np.nanstd(nuclei_IMG))
             cytoplasm_intensity_mean.append(np.nanmean(cytoplasm_IMG))
             cytoplasm_intensity_std.append(np.nanstd(cytoplasm_IMG))
             # Nuclear to cytoplasm ratio
-            N2C.append(nuclear_intensity_mean[
-                       -1] / cytoplasm_intensity_mean[-1])
+            N2C.append(nuclear_intensity_mean[-1] / cytoplasm_intensity_mean[-1])
             masked_spot = (input_spot * mask).astype(np.int16)
             lab, counts = ndimage.label(masked_spot)
             count_cells.append(counts)
