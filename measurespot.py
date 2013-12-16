@@ -145,6 +145,7 @@ class MeasurementSpots(cpm.CPModule):
     def settings(self):
         return [self.input_image_name,
                 self.input_image_coloc_name,
+                self.input_nuclei_mask,
                 self.input_object_mask,
                 self.input_object_spots]
 
