@@ -17,6 +17,7 @@ to get it to display correctly.
 
 import numpy as np
 import scipy.ndimage as ndimage
+from scipy import stats
 import os
 #
 #
@@ -211,10 +212,10 @@ class MeasurementSpots(cpm.CPModule):
                     if cytoplasm_IMG[k][j] == 0:
                         cytoplasm_IMG[k][j] = np.nan
             # Calculating intensity
-            nuclear_intensity_mean.append(np.nanmean(nuclei_IMG))
-            nuclear_intensity_std.append(np.nanstd(nuclei_IMG))
-            cytoplasm_intensity_mean.append(np.nanmean(cytoplasm_IMG))
-            cytoplasm_intensity_std.append(np.nanstd(cytoplasm_IMG))
+            nuclear_intensity_mean.append(stats.nanmean(nuclei_IMG))
+            nuclear_intensity_std.append(stats.nanstd(nuclei_IMG))
+            cytoplasm_intensity_mean.append(stats.nanmean(cytoplasm_IMG))
+            cytoplasm_intensity_std.append(stats.nanstd(cytoplasm_IMG))
             # Nuclear to cytoplasm ratio
             N2C.append(nuclear_intensity_mean[-1] / cytoplasm_intensity_mean[-1])
             masked_spot = (input_spot * mask).astype(np.int16)
